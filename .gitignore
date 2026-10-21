@@ -1,0 +1,6 @@
+node_modules/
+*.tgz
+
+# Secrets: never in the repo
+.env*
+!.env.example
