@@ -1,0 +1,91 @@
+# ============================================================
+# ROLE: Template CI: gates on commits, guidelines, OpenSpec, flow and dependencies
+# DEPENDS ON: scripts/sync-agents.js, scripts/check-flow.sh, scripts/openspec-update.sh,
+#   commitlint.config.js, openspec CLI
+# USED BY: GitHub Actions on every PR to main and every push to main
+# KEY DECISIONS: actions pinned to SHA (supply chain); audit on production dependencies
+#   only; lint/test/build with --if-present, so projects inherit them as soon as they
+#   add the scripts
+# GOTCHAS: the branch name comes from github.head_ref and is untrusted input:
+#   always pass it through an environment variable, never interpolate it in the script
+# LAST UPDATED: 2026-10-12 - OpenSpec commands checked against the pinned profile
+# ============================================================
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    env:
+      OPENSPEC_TELEMETRY: '0'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Commit messages
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: npx --no -- commitlint --from "$BASE_SHA" --to "$HEAD_SHA" --verbose
+
+      - name: Commit messages (push su main)
+        if: github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000'
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+          AFTER_SHA: ${{ github.sha }}
+        run: npx --no -- commitlint --from "$BEFORE_SHA" --to "$AFTER_SHA" --verbose
+
+      - name: Flusso OpenSpec (branch, spec, archivio, summary)
+        if: github.event_name == 'pull_request'
+        env:
+          BRANCH: ${{ github.head_ref }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: bash scripts/check-flow.sh "$BRANCH" "$BASE_SHA" "$HEAD_SHA"
+
+      - name: Guidelines allineate ai file generati
+        run: node scripts/sync-agents.js --check
+
+      - name: OpenSpec allineato al profilo pinnato
+        run: bash scripts/openspec-update.sh --check
+
+      - name: OpenSpec validate
+        run: |
+          npx --no -- openspec validate --all --strict --no-interactive
+          npx --no -- openspec validate --archived --no-interactive
+
+      - name: Audit dipendenze di produzione
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Lint
+        run: npm run lint --if-present
+
+      - name: Test
+        run: npm run test --if-present
+
+      - name: Build
+        run: npm run build --if-present

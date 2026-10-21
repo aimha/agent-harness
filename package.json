@@ -1,0 +1,25 @@
+{
+  "name": "@aimha/agent-harness",
+  "version": "0.0.0",
+  "description": "Regole e strumenti per lo sviluppo con agenti AI: guidelines, skill OpenCode, flusso OpenSpec, hook e CI",
+  "type": "module",
+  "private": true,
+  "bin": {
+    "agent-harness": "bin/cli.js"
+  },
+  "files": [
+    "bin",
+    "assets"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aimha/agent-harness.git"
+  },
+  "bugs": {
+    "url": "https://github.com/aimha/agent-harness/issues"
+  },
+  "homepage": "https://github.com/aimha/agent-harness#readme"
+}
