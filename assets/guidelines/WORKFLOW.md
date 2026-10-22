@@ -73,7 +73,7 @@ L'agente della sessione 2 non modifica i test. Se un test sembra sbagliato, si f
 
 - `/opsx-verify` confronta l'implementazione con gli artefatti del change.
 - Tutti i test passano, ogni scenario ha il suo test.
-- Summary obbligatorio in `docs/summaries/<nome-change>.md` (vedi sotto).
+- Summary obbligatorio in `docs/summaries/ai/<nome-change>.md` (vedi sotto).
 - PR `ai/<nome-change>` → `main` con review umana.
 
 ### 8. Chiusura
@@ -89,7 +89,9 @@ Refactor, tooling e documentazione passano comunque da un change OpenSpec, ma se
 
 ## Summary obbligatorio
 
-Al termine del change creare `docs/summaries/<nome-change>.md`. Il nome corrisponde al change e al branch senza il prefisso `ai/`.
+Al termine del change creare `docs/summaries/ai/<nome-change>.md`: il percorso segue il nome del branch, e il nome corrisponde al change. Esempio: branch `ai/fix-header-mobile` → `docs/summaries/ai/fix-header-mobile.md`.
+
+La CI controlla che ogni summary in `docs/summaries/ai/` presente in una PR abbia il suo change archiviato, qualunque sia il branch della PR: vale anche quando una catena di branch si chiude con un `fix/` o un `feature/`.
 
 ```markdown
 # <nome-change>

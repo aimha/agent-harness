@@ -8,7 +8,7 @@
 //   never through npx, so the pinned versions are the ones that run
 // GOTCHAS: the project is found from where the package is installed, not from cwd:
 //   running npx from a subfolder still targets the project root
-// LAST UPDATED: 2026-10-22 - hooks, check-flow, commitlint and openspec commands
+// LAST UPDATED: 2026-10-22 - files handed over to the project, base branch for check-flow
 // ============================================================
 
 import { spawnSync } from 'child_process'
@@ -16,7 +16,7 @@ import { join } from 'path'
 import { readFileSync } from 'fs'
 import { sync, projectRoot, packageVersion, SyncError, LOCK_FILE, PKG_ROOT } from '../lib/sync.js'
 import { preCommit, prePush, commitlint } from '../lib/hooks.js'
-import { openspecCli, openspecMismatch, MissingDependencyError } from '../lib/deps.js'
+import { openspecCli, projectProblems, MissingDependencyError } from '../lib/deps.js'
 
 const version = packageVersion()
 
@@ -27,7 +27,7 @@ Uso: npx agent-harness <comando>
 Comandi:
   sync                          genera i file gestiti dal pacchetto nel progetto
   sync --check                  controlla che siano allineati, senza scrivere
-  check-flow <branch> <base> <head>
+  check-flow <branch> <base> <head> [<base-branch>]
                                 controlla il flusso OpenSpec di una PR (CI)
   commitlint [opzioni]          commitlint con le regole del pacchetto (CI)
   openspec [argomenti]          la CLI OpenSpec nella versione del pacchetto
@@ -47,18 +47,20 @@ function report(problems) {
 function runSync(args) {
   const check = args.includes('--check')
   const root = projectRoot()
-  const { stale, orphans, lockVersion } = sync(root, { check })
-  const mismatch = openspecMismatch(root)
+  const { stale, orphans, lockVersion, handedOver } = sync(root, { check })
+  const problems = projectProblems(root)
 
   if (!check) {
     for (const rel of stale) console.log(`  ✓  ${rel}`)
     for (const rel of orphans) console.log(`  ✗  ${rel} rimosso: non più fornito dal pacchetto`)
-    console.log(stale.length + orphans.length ? `\n✅  sync completato (agent-harness ${version})` : `✅  già allineato (agent-harness ${version})`)
-    if (mismatch) console.error(`\n⚠️   ${mismatch}`)
+    for (const rel of handedOver) console.log(`  →  ${rel} ora è del progetto: il pacchetto non lo gestisce più`)
+    const changed = stale.length + orphans.length + handedOver.length
+    console.log(changed ? `\n✅  sync completato (agent-harness ${version})` : `✅  già allineato (agent-harness ${version})`)
+    for (const problem of problems) console.error(`\n⚠️   ${problem}`)
     return 0
   }
 
-  if (!stale.length && !orphans.length && !mismatch) {
+  if (!stale.length && !orphans.length && !problems.length) {
     console.log(`✅  file gestiti allineati (agent-harness ${version})`)
     return 0
   }
@@ -71,7 +73,7 @@ function runSync(args) {
     console.error('\n❌  File gestiti non allineati: esegui npx agent-harness sync e committa.')
     console.error('    Le modifiche locali vanno in .agent-guidelines/PATTERNS.md o in opencode.local.json.')
   }
-  if (mismatch) console.error(`\n❌  ${mismatch}`)
+  for (const problem of problems) console.error(`\n❌  ${problem}`)
   return 1
 }
 
@@ -87,8 +89,8 @@ function runHook([name, ...args]) {
 
 // Runs the flow gate script from the project root
 function runCheckFlow(args) {
-  if (args.length !== 3) {
-    console.error('❌  Uso: agent-harness check-flow <branch> <base-sha> <head-sha>')
+  if (args.length < 3 || args.length > 4) {
+    console.error('❌  Uso: agent-harness check-flow <branch> <base-sha> <head-sha> [<base-branch>]')
     return 1
   }
   const script = join(PKG_ROOT, 'lib', 'check-flow.sh')

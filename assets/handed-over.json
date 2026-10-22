@@ -1,0 +1,9 @@
+{
+  "note": "Files the package managed in an earlier version and now leaves to the project: sync drops them from the lock without deleting them.",
+  "files": [
+    ".github/workflows/ci.yml",
+    ".husky/commit-msg",
+    ".husky/pre-commit",
+    ".husky/pre-push"
+  ]
+}

@@ -1,25 +1,34 @@
 #!/usr/bin/env bash
 # ============================================================
-# ROLE: PR gate for the OpenSpec flow, driven by the branch prefix
+# ROLE: PR gate for the OpenSpec flow, driven by the branch prefix and the PR content
 # DEPENDS ON: git, openspec/ and docs/summaries/ layout
-# USED BY: agent-harness check-flow, called by ci.yml (checks job, pull_request only)
+# USED BY: agent-harness check-flow, called by agent-harness.yml (pull_request only)
 # KEY DECISIONS: spec/<name> holds only the change of the same name (+ GLOSSARY.md and
-#   docs/adr/), must have tasks.md and docs-only commits; ai/<name> must reach the merge
-#   with the change archived via the CLI and the summary in place
-# GOTCHAS: <name> must match the OpenSpec change name.
-#   feature/, fix/ and chore/ only check the branch name.
+#   docs/adr/), must have tasks.md and docs-only commits; ai/<name> needs its summary
+#   in docs/summaries/ai/<name>.md and its change archived. Every agent summary in the
+#   PR range needs its change archived whatever the head branch, so a branch chain
+#   that ends on fix/ or feature/ cannot skip the archive. develop -> main (and back)
+#   is the integration PR between the two long-lived branches
+# GOTCHAS: <name> must match the OpenSpec change name. feature/, fix/ and chore/ only
+#   check the branch name and the summaries they carry. Editing an agent summary
+#   whose change was never archived fails the gate.
 #   PREFIXES drives both the regex and the error message: extend it in one place.
 #   Runs with the project root as cwd: every path is relative to the project.
-# LAST UPDATED: 2026-10-22 - moved from the template into the package
+# LAST UPDATED: 2026-10-22 - develop integration PRs, summaries per branch path,
+#   archive check keyed on the summaries in the PR
 # ============================================================
 set -euo pipefail
 
 BRANCH="$1"
 BASE_SHA="$2"
 HEAD_SHA="$3"
+BASE_BRANCH="${4:-}"
 
 # Branch prefixes accepted by the flow
 PREFIXES="ai|spec|feature|fix|chore"
+
+# Long-lived branches: a PR between them is an integration PR
+LONG_LIVED="main|develop"
 
 # Fail with a readable message
 fail() {
@@ -27,11 +36,27 @@ fail() {
   exit 1
 }
 
-[[ "$BRANCH" =~ ^($PREFIXES)/[a-z0-9][a-z0-9-]*$ ]] \
-  || fail "Nome branch non conforme: $BRANCH\n    Atteso: <$PREFIXES>/<kebab-case>"
+# Fails unless the change has been archived through the CLI
+assert_archived() {
+  local name="$1"
+  [ ! -d "openspec/changes/$name" ] \
+    || fail "Change $name non archiviato: eseguire npx openspec archive $name --yes prima del merge (passo 8)"
+  ls openspec/changes/archive 2>/dev/null | grep -qE "^[0-9]{4}-[0-9]{2}-[0-9]{2}-$name$" \
+    || fail "Nessun change archiviato con nome $name in openspec/changes/archive/"
+}
 
-PREFIX="${BRANCH%%/*}"
-NAME="${BRANCH#*/}"
+if [[ "$BRANCH" =~ ^($LONG_LIVED)$ ]]; then
+  [[ "$BASE_BRANCH" =~ ^($LONG_LIVED)$ && "$BASE_BRANCH" != "$BRANCH" ]] \
+    || fail "Il branch $BRANCH si mergia solo nell'altro branch principale (main o develop)"
+  PREFIX="$BRANCH"
+  NAME=""
+else
+  [[ "$BRANCH" =~ ^($PREFIXES)/[a-z0-9][a-z0-9-]*$ ]] \
+    || fail "Nome branch non conforme: $BRANCH\n    Atteso: <$PREFIXES>/<kebab-case>"
+  PREFIX="${BRANCH%%/*}"
+  NAME="${BRANCH#*/}"
+fi
+
 CHANGED=$(git diff --name-only "$BASE_SHA"..."$HEAD_SHA")
 
 case "$PREFIX" in
@@ -48,13 +73,17 @@ case "$PREFIX" in
       || fail "Sui branch spec/ sono ammessi solo commit di tipo docs:\n$NOT_DOCS"
     ;;
   ai)
-    [ ! -d "openspec/changes/$NAME" ] \
-      || fail "Change $NAME non archiviato: eseguire npx openspec archive $NAME --yes prima del merge (passo 8)"
-    ls openspec/changes/archive 2>/dev/null | grep -qE "^[0-9]{4}-[0-9]{2}-[0-9]{2}-$NAME$" \
-      || fail "Nessun change archiviato con nome $NAME in openspec/changes/archive/"
-    [ -f "docs/summaries/$NAME.md" ] \
-      || fail "Manca il summary docs/summaries/$NAME.md"
+    [ -f "docs/summaries/ai/$NAME.md" ] \
+      || fail "Manca il summary docs/summaries/ai/$NAME.md"
+    assert_archived "$NAME"
     ;;
 esac
+
+# Every agent summary added or changed in the PR needs its change archived
+SUMMARIES=$(printf '%s\n' "$CHANGED" | sed -nE 's|^docs/summaries/ai/([a-z0-9][a-z0-9-]*)\.md$|\1|p' | sort -u)
+for SUMMARY in $SUMMARIES; do
+  [ -f "docs/summaries/ai/$SUMMARY.md" ] || continue
+  assert_archived "$SUMMARY"
+done
 
 echo "✅  Flusso rispettato per $BRANCH"

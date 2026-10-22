@@ -6,7 +6,7 @@
 //   archive, Purpose), as a person would; each gate is checked at the step it guards
 // GOTCHAS: OpenSpec rejects a Purpose shorter than 50 characters after archive, so the
 //   fixture writes a real one
-// LAST UPDATED: 2026-10-22 - first version, ported from the template flow simulation
+// LAST UPDATED: 2026-10-22 - summaries per branch path, chains, develop integration PRs
 // ============================================================
 
 import { test } from 'node:test'
@@ -32,7 +32,7 @@ function commit(root, message) {
   git(root, 'commit', '-qm', message)
 }
 
-const flow = (root, branch) => cli(root, ['check-flow', branch, 'main', 'HEAD'])
+const flow = (root, branch, base = 'develop') => cli(root, ['check-flow', branch, 'main', 'HEAD', base])
 const openspec = (root, ...args) => cli(root, ['openspec', ...args])
 
 test('check-flow rejects unknown prefixes and non kebab-case names, listing every prefix', () => {
@@ -85,8 +85,8 @@ test('a change walks the whole flow and every gate holds at its step', () => {
   git(root, 'checkout', '-qb', 'ai/hello-endpoint')
   mkdirSync(join(root, 'src'))
   writeFileSync(join(root, 'src', 'hello.ts'), 'export const hello = () => "ciao"\n')
-  mkdirSync(join(root, 'docs', 'summaries'), { recursive: true })
-  writeFileSync(join(root, 'docs', 'summaries', 'hello-endpoint.md'), '# hello-endpoint\n')
+  mkdirSync(join(root, 'docs', 'summaries', 'ai'), { recursive: true })
+  writeFileSync(join(root, 'docs', 'summaries', 'ai', 'hello-endpoint.md'), '# hello-endpoint\n')
   commit(root, 'feat(hello): endpoint')
   const unarchived = flow(root, 'ai/hello-endpoint')
   assert.equal(unarchived.status, 1)
@@ -124,4 +124,70 @@ test('a change without new behaviour passes with skip_specs', () => {
   assert.equal(openspec(root, 'validate', 'tooling-lint', '--strict', '--no-interactive').status, 0)
   assert.equal(flow(root, 'spec/tooling-lint').status, 0)
   assert.equal(existsSync(join(dir, 'specs')), false)
+})
+
+// A repo on main with the managed files and an empty OpenSpec tree
+function flowRepo() {
+  const root = gitRepo(project())
+  sync(root)
+  mkdirSync(join(root, 'openspec', 'specs'), { recursive: true })
+  mkdirSync(join(root, 'openspec', 'changes', 'archive'), { recursive: true })
+  writeFileSync(join(root, 'openspec', 'specs', '.gitkeep'), '')
+  writeFileSync(join(root, 'openspec', 'changes', 'archive', '.gitkeep'), '')
+  commit(root, 'chore: init')
+  return root
+}
+
+// Writes an agent summary
+function summary(root, name) {
+  mkdirSync(join(root, 'docs', 'summaries', 'ai'), { recursive: true })
+  writeFileSync(join(root, 'docs', 'summaries', 'ai', `${name}.md`), `# ${name}\n`)
+}
+
+test('ai/ needs its summary in docs/summaries/ai/', () => {
+  const root = flowRepo()
+  git(root, 'checkout', '-qb', 'ai/no-summary')
+  writeFileSync(join(root, 'x.ts'), 'x')
+  commit(root, 'feat: x')
+  assert.match(flow(root, 'ai/no-summary').out, /Manca il summary docs\/summaries\/ai\/no-summary\.md/)
+})
+
+test('a chain ending on fix/ still needs the archive for the agent summary it carries', () => {
+  const root = flowRepo()
+  git(root, 'checkout', '-qb', 'fix/r2-config')
+  assert.equal(openspec(root, 'new', 'change', 'r2-vault').status, 0)
+  writeChange(root, 'r2-vault')
+  summary(root, 'r2-vault')
+  writeFileSync(join(root, 'vault.ts'), 'x')
+  commit(root, 'feat: vault')
+  const { status, out } = flow(root, 'fix/r2-config')
+  assert.equal(status, 1)
+  assert.match(out, /Change r2-vault non archiviato/)
+  assert.equal(openspec(root, 'archive', 'r2-vault', '--yes').status, 0)
+  commit(root, 'docs: archive r2-vault')
+  assert.equal(flow(root, 'fix/r2-config').status, 0)
+  assert.equal(flow(root, 'feature/r2', 'develop').status, 0, 'same range from a feature/ head')
+})
+
+test('a summary deleted in the PR is not checked', () => {
+  const root = flowRepo()
+  summary(root, 'old-task')
+  commit(root, 'docs: old summary')
+  git(root, 'checkout', '-qb', 'chore/cleanup')
+  git(root, 'rm', '-q', 'docs/summaries/ai/old-task.md')
+  commit(root, 'chore: drop old summary')
+  assert.equal(flow(root, 'chore/cleanup').status, 0)
+})
+
+test('develop and main merge only into each other, with the summary check applied', () => {
+  const root = flowRepo()
+  assert.equal(flow(root, 'develop', 'main').status, 0, 'release PR')
+  assert.equal(flow(root, 'main', 'develop').status, 0, 'back-merge after a hotfix')
+  assert.match(flow(root, 'develop', 'develop').out, /si mergia solo nell'altro branch principale/)
+  assert.equal(flow(root, 'develop', '').status, 1, 'base branch is required for integration PRs')
+  assert.equal(flow(root, 'develop', 'feature/x').status, 1)
+  git(root, 'checkout', '-qb', 'develop')
+  summary(root, 'unarchived')
+  commit(root, 'docs: summary without archive')
+  assert.match(flow(root, 'develop', 'main').out, /Change unarchived non archiviato|Nessun change archiviato con nome unarchived/)
 })

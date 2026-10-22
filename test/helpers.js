@@ -15,11 +15,12 @@ import { execFileSync, spawnSync } from 'child_process'
 import { PKG_ROOT, PATTERNS_FILE } from '../lib/sync.js'
 import { pinnedVersion } from '../lib/deps.js'
 
-// Creates a project holding only its own patterns file and a fake pinned OpenSpec install
+// Creates a project holding its own patterns file, an .nvmrc and a fake pinned OpenSpec install
 export function project(patterns = '# PATTERNS — Pattern specifici dello stack\n\n- NestJS') {
   const root = mkdtempSync(join(tmpdir(), 'harness-'))
   mkdirSync(join(root, '.agent-guidelines'))
   writeFileSync(join(root, PATTERNS_FILE), patterns)
+  writeFileSync(join(root, '.nvmrc'), '24\n')
   fakeOpenspec(root, pinnedVersion('@fission-ai/openspec'))
   return root
 }
