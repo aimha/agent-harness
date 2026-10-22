@@ -4,12 +4,12 @@
 // USED BY: npm test, CI of the package
 // KEY DECISIONS: hooks are called through the CLI, as Husky does, on real temp repos
 // GOTCHAS: the commit-msg cases are the rules that bit in practice: capitals and perf
-// LAST UPDATED: 2026-10-22 - first version
+// LAST UPDATED: 2026-10-22 — protected files on ai/ branches
 // ============================================================
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { writeFileSync } from 'fs'
+import { writeFileSync, mkdirSync } from 'fs'
 import { join } from 'path'
 import { sync, PATTERNS_FILE } from '../lib/sync.js'
 import { MAX_FILE_KB } from '../lib/hooks.js'
@@ -122,4 +122,47 @@ test('commitlint checks a commit range, as the CI does', () => {
 
 test('unknown hook is an error', () => {
   assert.equal(cli(repo(), ['hook', 'post-merge']).status, 1)
+})
+
+test('pre-commit on ai/ blocks protected files, project rules included, and lets the rest through', () => {
+  const root = repo('ai/vault')
+  writeFileSync(join(root, 'opencode.local.json'), JSON.stringify({ permission: { edit: { '*/vite.config.*': 'deny' } } }))
+  sync(root)
+  git(root, 'add', '-A')
+  git(root, 'commit', '-qm', 'chore: local rules', '--no-verify')
+  const attempt = (rel, content = 'x') => {
+    mkdirSync(join(root, rel, '..'), { recursive: true })
+    writeFileSync(join(root, rel), content)
+    git(root, 'add', rel)
+    const result = cli(root, ['hook', 'pre-commit'])
+    git(root, 'reset', '-q')
+    return result
+  }
+  for (const rel of ['package.json', 'backend/package.json', 'frontend/vite.config.js', '.env.local', '.github/workflows/x.yml']) {
+    const { status, out } = attempt(rel)
+    assert.equal(status, 1, rel)
+    assert.match(out, new RegExp(`File protetti modificati su un branch ai/\\*:\\n\\s+- ${rel.replaceAll('.', '\\.')}`), rel)
+  }
+  for (const rel of ['.env.example', 'backend/src/vault.service.ts', 'docs/summaries/ai/vault.md']) {
+    assert.equal(attempt(rel).status, 0, rel)
+  }
+})
+
+test('pre-commit leaves protected files to people on fix/ and feature/', () => {
+  for (const branch of ['fix/r2-config', 'feature/r2']) {
+    const root = repo(branch)
+    writeFileSync(join(root, 'package.json'), '{}')
+    git(root, 'add', 'package.json')
+    assert.equal(cli(root, ['hook', 'pre-commit']).status, 0, branch)
+  }
+})
+
+test('pre-commit on ai/ also blocks deleting a protected file', () => {
+  const root = repo('chore/base')
+  writeFileSync(join(root, 'Makefile'), 'all:\n')
+  git(root, 'add', 'Makefile')
+  git(root, 'commit', '-qm', 'chore: makefile', '--no-verify')
+  git(root, 'checkout', '-qb', 'ai/drop')
+  git(root, 'rm', '-q', 'Makefile')
+  assert.match(cli(root, ['hook', 'pre-commit']).out, /- Makefile/)
 })
