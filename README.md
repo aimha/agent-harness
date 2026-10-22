@@ -22,7 +22,9 @@ Il contenuto arriva dal template [openspec_agentsguidelines_template](https://gi
 | `lib/commitlint.config.js` | Regole dei messaggi di commit |
 | `lib/deps.js` | Percorsi e versioni di OpenSpec e commitlint |
 | `assets/guidelines/` | `CORE.md` e `WORKFLOW.md`, composti con il `PATTERNS.md` del progetto in `AGENTS.md`, `CLAUDE.md` e regole Cursor |
-| `assets/files/` | File copiati nel progetto allo stesso percorso: comandi e skill OpenCode (compresi quelli di OpenSpec), configurazione OpenSpec, hook di Husky, CI |
+| `assets/files/` | File copiati nel progetto allo stesso percorso: comandi e skill per OpenCode e, per OpenSpec, anche per Cursor; configurazione OpenSpec; CI del pacchetto |
+| `lib/cursor.js` | Regole Cursor: `base.mdc` e quelle per cartella |
+| `lib/permissions.js` | Valutazione dei permessi come la fa OpenCode |
 | `assets/opencode/permissions.json` | Permessi di base di OpenCode, composti con quelli del progetto |
 | `assets/openspec/profile.json` | Workflow OpenSpec attivi, usati per generare i comandi `/opsx-*` |
 | `scripts/openspec-assets.js` | Rigenera i comandi e le skill di OpenSpec negli asset (solo per chi sviluppa il pacchetto) |
@@ -47,7 +49,8 @@ Funziona da qualsiasi cartella del progetto: la radice è quella che contiene il
 
 | File nel progetto | Da dove arriva |
 | --- | --- |
-| `AGENTS.md`, `CLAUDE.md`, `.cursor/rules/base.mdc` | `CORE.md` e `WORKFLOW.md` del pacchetto, poi `.agent-guidelines/PATTERNS.md` del progetto |
+| `AGENTS.md`, `CLAUDE.md` | `CORE.md` e `WORKFLOW.md` del pacchetto, poi `.agent-guidelines/PATTERNS.md` del progetto |
+| `.cursor/rules/base.mdc` e le regole per cartella | come sopra, scelte da `.agent-guidelines/cursor-rules.json` se c'è |
 | `opencode.json` | permessi del pacchetto, poi `opencode.local.json` del progetto se esiste |
 | tutto ciò che sta in `assets/files/` | copiato com'è, allo stesso percorso |
 | `agent-harness.lock.json` | versione del pacchetto ed elenco dei file gestiti |
@@ -56,6 +59,19 @@ Funziona da qualsiasi cartella del progetto: la radice è quella che contiene il
 
 - `.agent-guidelines/PATTERNS.md`, obbligatorio: stack, struttura, naming, pattern, e le regole che valgono solo per il progetto, per esempio i file protetti dello stack (`vite.config.*`).
 - `opencode.local.json`, facoltativo: permessi aggiuntivi, nello stesso formato di `opencode.json`. I suoi `deny` di modifica sono anche i file protetti del progetto: il pre-commit li blocca sui branch `ai/`, e il `sync` li elenca nella sezione "File protetti" di `AGENTS.md`. Una sola lista, letta con le regole di OpenCode: i pattern partono dalla radice, quindi un file in una sottocartella si scrive con `*/` davanti (`*/vite.config.*`). Le regole vengono accodate a quelle del pacchetto. In OpenCode vince l'ultima regola che corrisponde, quindi una regola locale con lo stesso pattern di una del pacchetto la sostituisce e passa in fondo. Le altre chiavi (per esempio `model`) sostituiscono quelle del pacchetto.
+
+- `.agent-guidelines/cursor-rules.json`, facoltativo: le regole Cursor per cartella. Senza, `base.mdc` contiene tutto `PATTERNS.md` e non ci sono altre regole. Con:
+
+  ```json
+  {
+    "base": { "description": "Regole base — architettura, naming, workflow", "patterns": ["Stack", "Multi-tenancy"] },
+    "rules": [
+      { "file": "components.mdc", "description": "Regole per i componenti SolidJS", "globs": "frontend/src/components/**/*.jsx", "sections": ["Componenti SolidJS"] }
+    ]
+  }
+  ```
+
+  ogni regola diventa `.cursor/rules/<file>` con i suoi `globs` e le sezioni `## ` di `PATTERNS.md` elencate, intere. `base.patterns` dice quali sezioni entrano anche in `base.mdc`, che contiene sempre CORE e WORKFLOW; un elenco vuoto non ne mette nessuna. Una sezione rinominata in `PATTERNS.md` e non aggiornata qui fa fallire il `sync`. Una regola tolta dall'elenco viene rimossa al `sync` successivo. Le altre regole in `.cursor/rules/` che non vengono da qui restano del progetto.
 
 **Il lock** serve a due cose. Mostra quale versione ha generato i file, e `sync --check` segnala quando il pacchetto è stato aggiornato senza rilanciare il `sync`. Elenca anche i file gestiti, così quando una versione nuova smette di fornirne uno il `sync` lo rimuove dal progetto. I file che non sono mai stati nel lock non vengono mai toccati.
 
@@ -86,7 +102,7 @@ Ogni percorso gestito appartiene al pacchetto: il `sync` lo sovrascrive. La CI d
 ## Aggiornare OpenSpec o il profilo
 
 1. Cambiare la versione esatta di `@fission-ai/openspec` in `package.json` (release di almeno 5 giorni), oppure i workflow in `assets/openspec/profile.json`.
-2. `npm install`, poi `npm run openspec-assets`: rigenera `/opsx-*` e le skill `openspec-*` in `assets/files/.opencode/`, con una configurazione OpenSpec temporanea, senza toccare quella globale.
+2. `npm install`, poi `npm run openspec-assets`: rigenera `/opsx-*` e le skill `openspec-*` in `assets/files/.opencode/` e `assets/files/.cursor/`, con una configurazione OpenSpec temporanea, senza toccare quella globale.
 3. `npm test`: un test fallisce se gli asset non corrispondono alla CLI pinnata.
 
 ## Aggiornare un progetto
