@@ -9,7 +9,7 @@ npm i -D -E github:aimha/agent-harness#v0.1.0
 npx agent-harness help
 ```
 
-**Stato**: in costruzione, nessuna versione rilasciata. Il contenuto arriva dal template [openspec_agentsguidelines_template](https://github.com/aimha/openspec_agentsguidelines_template), che diventerà il primo progetto a usarlo.
+Il contenuto arriva dal template [openspec_agentsguidelines_template](https://github.com/aimha/openspec_agentsguidelines_template), che è il primo progetto a usarlo.
 
 ## Struttura
 
@@ -86,10 +86,29 @@ Ogni percorso gestito appartiene al pacchetto: il `sync` lo sovrascrive. Se un p
 2. `npm install`, poi `npm run openspec-assets`: rigenera `/opsx-*` e le skill `openspec-*` in `assets/files/.opencode/`, con una configurazione OpenSpec temporanea, senza toccare quella globale.
 3. `npm test`: un test fallisce se gli asset non corrispondono alla CLI pinnata.
 
+## Aggiornare un progetto
+
+```bash
+npm i -D -E github:aimha/agent-harness#v0.2.0   # la versione nuova
+npx agent-harness sync
+git add -A && git commit -m "chore(deps): update agent-harness to 0.2.0"
+```
+
+Il diff della PR mostra esattamente cosa cambia per gli agenti e per la CI del progetto: regole, permessi, comandi, hook.
+
+## Rilasciare una versione
+
+1. PR che porta `version` in `package.json` alla versione nuova, con `npm install --package-lock-only` per allineare il lockfile.
+2. Merge su `main` con la CI verde.
+3. Tag sul commit di merge: `git tag v0.2.0 && git push origin v0.2.0`. La CI controlla che il tag corrisponda a `package.json` e rilancia i test.
+4. I progetti si aggiornano quando vogliono, uno per uno, con la procedura sopra.
+
+Il numero di versione segue [semver](https://semver.org/lang/it/): una versione che obbliga i progetti a cambiare qualcosa oltre al `sync` (per esempio un file da rinominare) è una major.
+
 ## Passi di costruzione
 
 1. Struttura del repo e contenuti copiati dal template
 2. `sync` e `sync --check`
-3. Comandi eseguiti dal pacchetto: hook, controllo del flusso, commitlint, OpenSpec ← questo stato
-4. Test e CI del pacchetto, poi tag `v0.1.0`
+3. Comandi eseguiti dal pacchetto: hook, controllo del flusso, commitlint, OpenSpec
+4. Test e CI del pacchetto, versione `0.1.0` ← questo stato
 5. Il template passa a usare il pacchetto
