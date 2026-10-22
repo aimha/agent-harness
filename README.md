@@ -25,6 +25,7 @@ Il contenuto arriva dal template [openspec_agentsguidelines_template](https://gi
 | `assets/files/` | File copiati nel progetto allo stesso percorso: comandi e skill per OpenCode e, per OpenSpec, anche per Cursor; configurazione OpenSpec; CI del pacchetto |
 | `lib/cursor.js` | Regole Cursor: `base.mdc` e quelle per cartella |
 | `lib/permissions.js` | Valutazione dei permessi come la fa OpenCode |
+| `lib/format.js`, `lib/prettier-worker.js` | Formattazione dei file gestiti con il Prettier del progetto |
 | `assets/opencode/permissions.json` | Permessi di base di OpenCode, composti con quelli del progetto |
 | `assets/openspec/profile.json` | Workflow OpenSpec attivi, usati per generare i comandi `/opsx-*` |
 | `scripts/openspec-assets.js` | Rigenera i comandi e le skill di OpenSpec negli asset (solo per chi sviluppa il pacchetto) |
@@ -72,6 +73,8 @@ Funziona da qualsiasi cartella del progetto: la radice è quella che contiene il
   ```
 
   ogni regola diventa `.cursor/rules/<file>` con i suoi `globs` e le sezioni `## ` di `PATTERNS.md` elencate, intere. `base.patterns` dice quali sezioni entrano anche in `base.mdc`, che contiene sempre CORE e WORKFLOW; un elenco vuoto non ne mette nessuna. Una sezione rinominata in `PATTERNS.md` e non aggiornata qui fa fallire il `sync`. Una regola tolta dall'elenco viene rimossa al `sync` successivo. Le altre regole in `.cursor/rules/` che non vengono da qui restano del progetto.
+
+**Prettier.** Se il progetto dichiara `prettier` nel suo `package.json`, il `sync` passa i file gestiti Markdown e JSON (`.md`, `.mdc`, `.json`) dal Prettier **del progetto**, con la sua configurazione, prima di scriverli o confrontarli. Così un lint-staged che formatta il Markdown al commit non li cambia, e `sync --check` resta verde. I file elencati in `.prettierignore` restano come generati; YAML non viene mai formattato. Senza Prettier nel progetto non cambia niente.
 
 **Il lock** serve a due cose. Mostra quale versione ha generato i file, e `sync --check` segnala quando il pacchetto è stato aggiornato senza rilanciare il `sync`. Elenca anche i file gestiti, così quando una versione nuova smette di fornirne uno il `sync` lo rimuove dal progetto. I file che non sono mai stati nel lock non vengono mai toccati.
 
