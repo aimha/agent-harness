@@ -4,24 +4,15 @@
 // USED BY: npm test, CI of the package
 // KEY DECISIONS: every test works on a fresh temp project, never on the repo itself
 // GOTCHAS: the CLI targets cwd only because the repo checkout is not inside node_modules
-// LAST UPDATED: 2026-10-22 - first version
+// LAST UPDATED: 2026-10-22 - shared fixtures, OpenSpec version check
 // ============================================================
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from 'fs'
-import { tmpdir } from 'os'
+import { mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from 'fs'
 import { join } from 'path'
-import { spawnSync } from 'child_process'
 import { sync, plan, composeOpencode, packageVersion, PKG_ROOT, LOCK_FILE, PATTERNS_FILE, SyncError } from '../lib/sync.js'
-
-// Creates an empty project holding only its own patterns file
-function project(patterns = '# PATTERNS — Pattern specifici dello stack\n\n- NestJS') {
-  const root = mkdtempSync(join(tmpdir(), 'harness-'))
-  mkdirSync(join(root, '.agent-guidelines'))
-  writeFileSync(join(root, PATTERNS_FILE), patterns)
-  return root
-}
+import { project, cli as runCli, fakeOpenspec } from './helpers.js'
 
 const read = (root, rel) => readFileSync(join(root, rel), 'utf8')
 const writeJson = (root, rel, value) => writeFileSync(join(root, rel), JSON.stringify(value))
@@ -119,10 +110,7 @@ test('opencode.local.json is composed into opencode.json and invalid json is rep
 })
 
 // Runs the CLI inside a project and returns status and output
-function cli(root, ...args) {
-  const result = spawnSync(process.execPath, [join(PKG_ROOT, 'bin', 'cli.js'), ...args], { cwd: root, encoding: 'utf8' })
-  return { status: result.status, out: result.stdout + result.stderr }
-}
+const cli = (root, ...args) => runCli(root, args)
 
 test('cli: sync --check fails before sync, passes after, reports the version gap', () => {
   const root = project()
@@ -134,6 +122,17 @@ test('cli: sync --check fails before sync, passes after, reports the version gap
   const { status, out } = cli(root, 'sync', '--check')
   assert.equal(status, 1)
   assert.match(out, /versione 0\.0\.0-old/)
+})
+
+test('cli: sync --check fails when the project resolves another OpenSpec version', () => {
+  const root = project()
+  cli(root, 'sync')
+  fakeOpenspec(root, '0.1.0')
+  const { status, out } = cli(root, 'sync', '--check')
+  assert.equal(status, 1)
+  assert.match(out, /trova la versione 0\.1\.0/)
+  rmSync(join(root, 'node_modules'), { recursive: true })
+  assert.match(cli(root, 'sync', '--check').out, /non la trova/)
 })
 
 test('cli: user errors exit 1 without a stack trace', () => {

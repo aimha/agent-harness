@@ -80,18 +80,17 @@ Se un requisito è ambiguo, l'agente si ferma e formula la domanda specifica nel
 .opencode/commands/
 .opencode/skills/
 .npmrc
+agent-harness.lock.json
 AGENTS.md
 CLAUDE.md
-commitlint.config.js
-config/
 docker-compose.yml
 Makefile
 openspec/config.yaml
 openspec/specs/
 opencode.json
+opencode.local.json
 package-lock.json
 package.json        (root e ogni sub-package)
-scripts/check-flow.sh
-scripts/openspec-update.sh
-scripts/sync-agents.js
 ```
+
+I file protetti propri dello stack (per esempio `vite.config.*`) sono elencati in `PATTERNS.md`.
