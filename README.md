@@ -5,11 +5,11 @@ Regole e strumenti per lo sviluppo con agenti AI nei progetti Aimha: guidelines 
 È un pacchetto npm installato direttamente da GitHub, senza registro. Ogni versione è un tag git:
 
 ```bash
-npm i -D -E github:aimha/agent-harness#v0.1.0
+npm i -D -E github:aimha/agent-harness#v0.2.0
 npx agent-harness help
 ```
 
-Il contenuto arriva dal template [openspec_agentsguidelines_template](https://github.com/aimha/openspec_agentsguidelines_template), che è il primo progetto a usarlo.
+Il progetto di riferimento è Foundation: le regole generiche seguono le sue, e il pacchetto si adatta a Foundation, mai il contrario. Il template [openspec_agentsguidelines_template](https://github.com/aimha/openspec_agentsguidelines_template) è il punto di partenza per i progetti che non nascono da Foundation.
 
 ## Struttura
 
@@ -111,7 +111,7 @@ Ogni percorso gestito appartiene al pacchetto: il `sync` lo sovrascrive. La CI d
 ## Aggiornare un progetto
 
 ```bash
-npm i -D -E github:aimha/agent-harness#v0.2.0   # la versione nuova
+npm i -D -E github:aimha/agent-harness#<tag>   # la versione nuova, per esempio v0.3.0
 npx agent-harness sync
 git add -A && git commit -m "chore(deps): update agent-harness to 0.2.0"
 ```
@@ -122,15 +122,11 @@ Il diff della PR mostra esattamente cosa cambia per gli agenti e per la CI del p
 
 1. PR che porta `version` in `package.json` alla versione nuova, con `npm install --package-lock-only` per allineare il lockfile.
 2. Merge su `main` con la CI verde.
-3. Tag sul commit di merge: `git tag v0.2.0 && git push origin v0.2.0`. La CI controlla che il tag corrisponda a `package.json` e rilancia i test.
+3. Tag sul commit di merge: `git tag vX.Y.Z && git push origin vX.Y.Z`. La CI controlla che il tag corrisponda a `package.json` e rilancia i test.
 4. I progetti si aggiornano quando vogliono, uno per uno, con la procedura sopra.
 
 Il numero di versione segue [semver](https://semver.org/lang/it/): una versione che obbliga i progetti a cambiare qualcosa oltre al `sync` (per esempio un file da rinominare) è una major.
 
-## Passi di costruzione
+## Versioni
 
-1. Struttura del repo e contenuti copiati dal template
-2. `sync` e `sync --check`
-3. Comandi eseguiti dal pacchetto: hook, controllo del flusso, commitlint, OpenSpec
-4. Test e CI del pacchetto, versione `0.1.0` ← questo stato
-5. Il template passa a usare il pacchetto
+Le novità e gli interventi richiesti per aggiornare da una versione all'altra sono in [CHANGELOG.md](CHANGELOG.md).
