@@ -1,0 +1,30 @@
+schema: spec-driven
+
+context: |
+  Language: it
+  All artifacts must be written in it.
+  Keep OpenSpec structural headings and SHALL/MUST keywords in English.
+
+  Stack, struttura e pattern del progetto: vedi .agent-guidelines/PATTERNS.md.
+  Glossario di dominio: vedi GLOSSARY.md. Usare solo i termini canonici
+  definiti lì; se serve un termine nuovo, proporlo come domanda aperta.
+
+rules:
+  proposal:
+    - Includere sempre una sezione "Non-goals"
+    - Nessuna nuova dipendenza senza indicarla in Impact come domanda aperta
+  specs:
+    - Ogni scenario deve essere verificabile da un test automatico, con valori concreti
+    - I titoli degli scenari devono essere unici in tutto il progetto
+  design:
+    - Ogni decisione riporta le alternative considerate e perché sono state scartate
+  tasks:
+    - Il primo gruppo di task è sempre la scrittura dei test derivati dagli scenari, in una sessione separata
+    - Ogni test porta come nome il titolo esatto dello scenario da cui deriva
+    - Task da massimo 1-2 ore
+
+operations:
+  apply:
+    guidance:
+      - Lavorare solo nel worktree del branch ai/<nome-change>
+      - Non modificare mai i test esistenti per farli passare

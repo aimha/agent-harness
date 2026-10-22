@@ -9,6 +9,7 @@
   },
   "files": [
     "bin",
+    "lib",
     "assets"
   ],
   "engines": {
@@ -22,5 +23,8 @@
     "url": "https://github.com/aimha/agent-harness/issues"
   },
   "homepage": "https://github.com/aimha/agent-harness#readme",
+  "scripts": {
+    "test": "node --test"
+  },
   "license": "MIT"
 }
