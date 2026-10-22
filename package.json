@@ -25,6 +25,6 @@
   "homepage": "https://github.com/aimha/agent-harness#readme",
   "scripts": {
     "test": "node --test"
-  }
+  },
   "license": "MIT"
 }
