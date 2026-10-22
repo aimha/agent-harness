@@ -88,7 +88,7 @@ Ogni percorso gestito appartiene al pacchetto: il `sync` lo sovrascrive. La CI d
 
 | Comando | Chi lo usa |
 | --- | --- |
-| `agent-harness hook pre-commit` | `.husky/pre-commit`: niente commit su `main` e `develop`, file sotto i 500KB, file gestiti allineati e in staging, e sui branch `ai/` nessun file protetto |
+| `agent-harness hook pre-commit` | `.husky/pre-commit`: niente commit su `main` e `develop`, file sotto i 500KB (i lockfile sono esenti), file gestiti allineati e in staging, e sui branch `ai/` nessun file protetto |
 | `agent-harness hook pre-push` | `.husky/pre-push`: niente push su `main` e `develop`, anche con `git push origin HEAD:main` da un altro branch |
 | `agent-harness hook commit-msg <file>` | `.husky/commit-msg`: Conventional Commits con le regole del pacchetto |
 | `agent-harness commitlint --from <sha> --to <sha>` | CI: messaggi di tutti i commit della PR |

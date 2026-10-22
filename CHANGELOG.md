@@ -2,6 +2,16 @@
 
 Le versioni seguono [semver](https://semver.org/lang/it/). Nelle `0.x` una versione minore può richiedere interventi nel progetto: sono elencati sotto "Aggiornare".
 
+## 0.2.2 — 2026-10-22
+
+### Correzioni
+
+- **I lockfile erano soggetti al limite di 500KB del pre-commit**: un lockfile è generato, non si può dividere e cresce con le dipendenze, quindi un progetto vicino al limite si sarebbe trovato bloccato al primo aggiornamento, su qualsiasi branch. `package-lock.json`, `npm-shrinkwrap.json`, `yarn.lock` e `pnpm-lock.yaml` sono esenti per nome, in qualunque cartella; il limite resta per tutti gli altri file.
+
+### Aggiornare da 0.2.1
+
+`npm i -D -E github:aimha/agent-harness#v0.2.2`, poi `npx agent-harness sync`: nei file gestiti cambia solo la versione nell'intestazione.
+
 ## 0.2.1 — 2026-10-22
 
 ### Correzioni

@@ -4,7 +4,7 @@
 // USED BY: npm test, CI of the package
 // KEY DECISIONS: hooks are called through the CLI, as Husky does, on real temp repos
 // GOTCHAS: the commit-msg cases are the rules that bit in practice: capitals and perf
-// LAST UPDATED: 2026-10-22 — protected files on ai/ branches
+// LAST UPDATED: 2026-10-22 — lockfiles exempt from the size limit
 // ============================================================
 
 import { test } from 'node:test'
@@ -48,6 +48,23 @@ test('pre-commit blocks files over the size limit', () => {
   const { status, out } = cli(root, ['hook', 'pre-commit'])
   assert.equal(status, 1)
   assert.match(out, /File troppo grande: big\.bin/)
+})
+
+test('pre-commit lets lockfiles over the size limit through, at any depth', () => {
+  const root = repo()
+  mkdirSync(join(root, 'frontend'), { recursive: true })
+  for (const rel of ['package-lock.json', 'frontend/package-lock.json']) {
+    writeFileSync(join(root, rel), Buffer.alloc((MAX_FILE_KB + 1) * 1024))
+    git(root, 'add', rel)
+  }
+  assert.equal(cli(root, ['hook', 'pre-commit']).status, 0)
+})
+
+test('pre-commit still checks a file that only resembles a lockfile', () => {
+  const root = repo()
+  writeFileSync(join(root, 'package-lock.json.bak'), Buffer.alloc((MAX_FILE_KB + 1) * 1024))
+  git(root, 'add', 'package-lock.json.bak')
+  assert.match(cli(root, ['hook', 'pre-commit']).out, /File troppo grande: package-lock\.json\.bak/)
 })
 
 test('pre-commit blocks hand-edited managed files', () => {
