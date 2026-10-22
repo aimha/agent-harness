@@ -1,6 +1,6 @@
 {
   "name": "@aimha/agent-harness",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Regole e strumenti per lo sviluppo con agenti AI: guidelines, skill OpenCode, flusso OpenSpec, hook e CI",
   "type": "module",
   "private": true,
