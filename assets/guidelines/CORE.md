@@ -12,6 +12,9 @@ Stack, struttura del progetto, naming dei file e pattern stanno in `PATTERNS.md`
 - `spec/<nome-change>` — spec OpenSpec di un change (vedi WORKFLOW)
 - `chore/<descrizione>` — manutenzione: tooling, dipendenze, documentazione
 - `main` e `develop` — branch principali, mai lavorati direttamente
+- `revert-<n>-<branch>` — creati dal bottone Revert di GitHub: ammessi senza rinominarli
+
+Il nome è in kebab-case minuscolo, senza codici di ticket in maiuscolo: la CI lo controlla sulla PR e il `pre-push` prima del push. Un branch con un nome non conforme si rinomina con `git branch -m <nuovo-nome>`.
 
 ## Lingua
 

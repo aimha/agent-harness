@@ -2,6 +2,17 @@
 
 Le versioni seguono [semver](https://semver.org/lang/it/). Nelle `0.x` una versione minore può richiedere interventi nel progetto: sono elencati sotto "Aggiornare".
 
+## 0.3.0 — 2026-10-22
+
+### Novità
+
+- **Nome del branch controllato anche nel `pre-push`**, con la stessa regola della CI (`check-flow.sh --name`): un nome non conforme, per esempio con maiuscole o un prefisso fuori lista, si scopre prima del push e non all'apertura della PR. Vale il nome remoto, quindi anche `git push origin HEAD:<nome>`. Tag e cancellazioni non sono controllati: un branch con un nome sbagliato si può sempre eliminare.
+- **Branch del bottone Revert di GitHub** (`revert-<n>-<branch>`): accettati dalla CI e dal `pre-push`. Non hanno controlli legati al prefisso, ma i summary degli agenti che portano richiedono comunque il change archiviato. Prima la PR di un revert d'emergenza falliva il controllo del flusso.
+
+### Aggiornare da 0.2.2
+
+`npm i -D -E github:aimha/agent-harness#v0.3.0`, poi `npx agent-harness sync`: in `AGENTS.md` e nelle regole Cursor cambia la sezione "Branch". Un branch locale con un nome non conforme non si può più pushare: rinominarlo con `git branch -m <nuovo-nome>`.
+
 ## 0.2.2 — 2026-10-22
 
 ### Correzioni
