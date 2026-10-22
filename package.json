@@ -21,5 +21,6 @@
   "bugs": {
     "url": "https://github.com/aimha/agent-harness/issues"
   },
-  "homepage": "https://github.com/aimha/agent-harness#readme"
+  "homepage": "https://github.com/aimha/agent-harness#readme",
+  "license": "MIT"
 }
