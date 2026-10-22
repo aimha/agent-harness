@@ -1,0 +1,83 @@
+# ============================================================
+# ROLE: CI of the package: tests, commit messages, audit, and release tag checks
+# DEPENDS ON: npm test (node:test suites in test/), bin/cli.js commitlint, package.json version
+# USED BY: GitHub Actions on every PR to main, every push to main and every v* tag
+# KEY DECISIONS: actions pinned to SHA (supply chain), same pins as the project CI asset;
+#   tests run on every supported Node major (engines >=22); audit covers all dependencies,
+#   because the package's dependencies are what every project runs
+# GOTCHAS: this is the package's own CI, not assets/files/.github/workflows/ci.yml,
+#   which is the CI copied into projects. A v* tag must match package.json version,
+#   otherwise projects would install a version whose banner and lock disagree with the tag
+# LAST UPDATED: 2026-10-22 - first version
+# ============================================================
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: test (node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22, 24]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Commit messages
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node bin/cli.js commitlint --from "$BASE_SHA" --to "$HEAD_SHA" --verbose
+
+      - name: Test
+        run: npm test
+
+      - name: Audit dipendenze
+        run: npm audit --audit-level=high
+
+  release:
+    name: tag e versione
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Il tag corrisponde alla versione in package.json
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          VERSION="v$(node -p "require('./package.json').version")"
+          if [ "$VERSION" != "$TAG" ]; then
+            echo "❌  Tag $TAG ma package.json dice $VERSION"
+            exit 1
+          fi
+          echo "✅  $TAG"
