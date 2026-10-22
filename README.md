@@ -30,7 +30,7 @@ Il contenuto arriva dal template [openspec_agentsguidelines_template](https://gi
 ## Due modi di arrivare nei progetti
 
 - **Copiati** da `agent-harness sync`: i file che gli strumenti cercano in un percorso fisso (`AGENTS.md`, `.opencode/`, `opencode.json`, la CI). Ogni copia porta la versione del pacchetto, e `sync --check` in CI fallisce se qualcuno la modifica a mano.
-- **Eseguiti dal pacchetto**: controlli degli hook, controllo del flusso, commitlint, OpenSpec. Nel progetto resta solo la riga che li chiama (gli hook in `.husky/`, i passi di `ci.yml`), e cambiano con la versione.
+- **Eseguiti dal pacchetto**: controlli degli hook, controllo del flusso, commitlint, OpenSpec. Nel progetto resta solo la riga che li chiama: una riga negli hook di `.husky/`, che restano del progetto, e i passi di `agent-harness.yml`. Cambiano con la versione.
 
 Il progetto tiene i file suoi, che il `sync` non tocca: `PATTERNS.md`, le aggiunte locali alle regole e ai permessi, glossario, ADR e spec.
 
@@ -59,7 +59,9 @@ Funziona da qualsiasi cartella del progetto: la radice è quella che contiene il
 
 **Il lock** serve a due cose. Mostra quale versione ha generato i file, e `sync --check` segnala quando il pacchetto è stato aggiornato senza rilanciare il `sync`. Elenca anche i file gestiti, così quando una versione nuova smette di fornirne uno il `sync` lo rimuove dal progetto. I file che non sono mai stati nel lock non vengono mai toccati.
 
-Ogni percorso gestito appartiene al pacchetto: il `sync` lo sovrascrive. Se un progetto ha bisogno di un workflow CI in più, lo mette in un file suo accanto a `ci.yml` (per esempio `.github/workflows/e2e.yml`), non dentro `ci.yml`.
+Ogni percorso gestito appartiene al pacchetto: il `sync` lo sovrascrive. La CI del pacchetto è `.github/workflows/agent-harness.yml`, con solo i suoi controlli. Lint, build e test stanno in un workflow del progetto, che conosce lo stack (per esempio `ci.yml`).
+
+**File ceduti al progetto.** Quando una versione smette di gestire un file che il progetto deve tenere, lo elenca in `assets/handed-over.json`: il `sync` lo toglie dal lock senza cancellarlo, e da lì in poi è del progetto. Con la 0.2.0 sono `ci.yml` e gli hook di `.husky/`.
 
 `sync --check` controlla anche che `npx openspec` nel progetto trovi la stessa versione di OpenSpec del pacchetto: è quella che usano gli agenti e i comandi del WORKFLOW.
 
@@ -77,7 +79,8 @@ Ogni percorso gestito appartiene al pacchetto: il `sync` lo sovrascrive. Se un p
 ## Cosa serve nel progetto
 
 - `@aimha/agent-harness` come devDependency, con versione esatta.
-- `husky` come devDependency e `"prepare": "husky"` negli script: è Husky che attiva gli hook a ogni `npm ci` o `npm install`. Gli hook in `.husky/` li scrive il `sync`.
+- `husky` come devDependency e `"prepare": "husky"` negli script: è Husky che attiva gli hook a ogni `npm ci` o `npm install`. Gli hook in `.husky/` sono del progetto: ognuno chiama per primo il pacchetto (`npx --no -- agent-harness hook pre-commit`, `hook pre-push "$@"`, `hook commit-msg "$1"`) e poi i controlli propri.
+- `.nvmrc` nella radice: la CI del pacchetto prende da lì la versione di Node. `sync --check` segnala se manca.
 - Niente OpenSpec né commitlint tra le dipendenze del progetto: arrivano con il pacchetto, e una versione diversa nel progetto prenderebbe il posto di quella pinnata. `sync --check` lo segnala.
 
 ## Aggiornare OpenSpec o il profilo

@@ -31,7 +31,7 @@ test('sync writes guidelines with the version banner and the project patterns la
 test('sync copies asset files byte for byte, dot folders included', () => {
   const root = project()
   sync(root)
-  for (const rel of ['.opencode/skills/grilling/SKILL.md', '.github/workflows/ci.yml', 'openspec/config.yaml']) {
+  for (const rel of ['.opencode/skills/grilling/SKILL.md', '.github/workflows/agent-harness.yml', 'openspec/config.yaml']) {
     assert.equal(read(root, rel), readFileSync(join(PKG_ROOT, 'assets', 'files', rel), 'utf8'), rel)
   }
 })
@@ -142,4 +142,35 @@ test('cli: user errors exit 1 without a stack trace', () => {
   assert.equal(status, 1)
   assert.doesNotMatch(out, /at .*\.js:\d+/)
   assert.equal(cli(root, 'nope').status, 1)
+})
+
+test('files handed over to the project leave the lock but stay on disk', () => {
+  const root = project()
+  sync(root)
+  mkdirSync(join(root, '.husky'), { recursive: true })
+  writeFileSync(join(root, '.husky', 'pre-commit'), 'npx --no -- agent-harness hook pre-commit\nnpx lint-staged\n')
+  mkdirSync(join(root, '.github', 'workflows'), { recursive: true })
+  writeFileSync(join(root, '.github', 'workflows', 'ci.yml'), 'name: CI\n')
+  const lock = JSON.parse(read(root, LOCK_FILE))
+  writeJson(root, LOCK_FILE, { ...lock, files: [...lock.files, '.husky/pre-commit', '.github/workflows/ci.yml'].sort() })
+
+  const check = sync(root, { check: true })
+  assert.deepEqual(check.orphans, [])
+  assert.deepEqual(check.handedOver.sort(), ['.github/workflows/ci.yml', '.husky/pre-commit'])
+  assert.ok(check.stale.includes(LOCK_FILE), 'the lock must be rewritten without them')
+
+  sync(root)
+  assert.equal(read(root, '.husky/pre-commit'), 'npx --no -- agent-harness hook pre-commit\nnpx lint-staged\n')
+  assert.equal(read(root, '.github/workflows/ci.yml'), 'name: CI\n')
+  assert.equal(JSON.parse(read(root, LOCK_FILE)).files.includes('.husky/pre-commit'), false)
+  assert.deepEqual(sync(root, { check: true }).stale, [])
+})
+
+test('cli: sync --check fails without .nvmrc', () => {
+  const root = project()
+  cli(root, 'sync')
+  rmSync(join(root, '.nvmrc'))
+  const { status, out } = cli(root, 'sync', '--check')
+  assert.equal(status, 1)
+  assert.match(out, /Manca \.nvmrc/)
 })
