@@ -31,6 +31,6 @@
   "dependencies": {
     "@commitlint/cli": "21.2.3",
     "@commitlint/config-conventional": "21.2.3",
-    "@fission-ai/openspec": "1.14.1"
+    "@fission-ai/openspec": "1.14.3"
   }
 }
