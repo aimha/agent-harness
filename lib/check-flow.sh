@@ -2,27 +2,24 @@
 # ============================================================
 # ROLE: PR gate for the OpenSpec flow, driven by the branch prefix and the PR content
 # DEPENDS ON: git, openspec/ and docs/summaries/ layout
-# USED BY: agent-harness check-flow, called by agent-harness.yml (pull_request only)
+# USED BY: agent-harness check-flow, called by agent-harness.yml (pull_request only);
+#   lib/hooks.js pre-push (--name)
 # KEY DECISIONS: spec/<name> holds only the change of the same name (+ GLOSSARY.md and
 #   docs/adr/), must have tasks.md and docs-only commits; ai/<name> needs its summary
 #   in docs/summaries/ai/<name>.md and its change archived. Every agent summary in the
 #   PR range needs its change archived whatever the head branch, so a branch chain
 #   that ends on fix/ or feature/ cannot skip the archive. develop -> main (and back)
-#   is the integration PR between the two long-lived branches
+#   is the integration PR between the two long-lived branches.
+#   revert-<n>- branches from the GitHub Revert button pass the name check and get
+#   only the summary check. With --name <branch> it checks the name alone (pre-push)
 # GOTCHAS: <name> must match the OpenSpec change name. feature/, fix/ and chore/ only
 #   check the branch name and the summaries they carry. Editing an agent summary
 #   whose change was never archived fails the gate.
 #   PREFIXES drives both the regex and the error message: extend it in one place.
 #   Runs with the project root as cwd: every path is relative to the project.
-# LAST UPDATED: 2026-10-22 - develop integration PRs, summaries per branch path,
-#   archive check keyed on the summaries in the PR
+# LAST UPDATED: 2026-10-22 — revert branches, name-only mode for pre-push
 # ============================================================
 set -euo pipefail
-
-BRANCH="$1"
-BASE_SHA="$2"
-HEAD_SHA="$3"
-BASE_BRANCH="${4:-}"
 
 # Branch prefixes accepted by the flow
 PREFIXES="ai|spec|feature|fix|chore"
@@ -30,11 +27,42 @@ PREFIXES="ai|spec|feature|fix|chore"
 # Long-lived branches: a PR between them is an integration PR
 LONG_LIVED="main|develop"
 
+# Branches the GitHub Revert button creates: revert-<PR number>-<reverted branch>
+REVERT="revert-[0-9]+-.+"
+
 # Fail with a readable message
 fail() {
   printf '❌  %b\n' "$1"
   exit 1
 }
+
+# Fails unless the flow accepts the branch name; sets PREFIX and NAME
+check_name() {
+  local branch="$1"
+  if [[ "$branch" =~ ^($LONG_LIVED)$ ]]; then
+    PREFIX="$branch"
+    NAME=""
+  elif [[ "$branch" =~ ^$REVERT$ ]]; then
+    PREFIX="revert"
+    NAME=""
+  else
+    [[ "$branch" =~ ^($PREFIXES)/[a-z0-9][a-z0-9-]*$ ]] \
+      || fail "Nome branch non conforme: $branch\n    Atteso: <$PREFIXES>/<kebab-case>"
+    PREFIX="${branch%%/*}"
+    NAME="${branch#*/}"
+  fi
+}
+
+# Name-only mode, used by the pre-push hook: the same rule, before the PR exists
+if [ "${1:-}" = "--name" ]; then
+  check_name "${2:-}"
+  exit 0
+fi
+
+BRANCH="$1"
+BASE_SHA="$2"
+HEAD_SHA="$3"
+BASE_BRANCH="${4:-}"
 
 # Fails unless the change has been archived through the CLI
 assert_archived() {
@@ -45,16 +73,10 @@ assert_archived() {
     || fail "Nessun change archiviato con nome $name in openspec/changes/archive/"
 }
 
-if [[ "$BRANCH" =~ ^($LONG_LIVED)$ ]]; then
+check_name "$BRANCH"
+if [[ "$PREFIX" =~ ^($LONG_LIVED)$ ]]; then
   [[ "$BASE_BRANCH" =~ ^($LONG_LIVED)$ && "$BASE_BRANCH" != "$BRANCH" ]] \
     || fail "Il branch $BRANCH si mergia solo nell'altro branch principale (main o develop)"
-  PREFIX="$BRANCH"
-  NAME=""
-else
-  [[ "$BRANCH" =~ ^($PREFIXES)/[a-z0-9][a-z0-9-]*$ ]] \
-    || fail "Nome branch non conforme: $BRANCH\n    Atteso: <$PREFIXES>/<kebab-case>"
-  PREFIX="${BRANCH%%/*}"
-  NAME="${BRANCH#*/}"
 fi
 
 CHANGED=$(git diff --name-only "$BASE_SHA"..."$HEAD_SHA")

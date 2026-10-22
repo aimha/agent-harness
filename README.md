@@ -18,7 +18,7 @@ Il progetto di riferimento è Foundation: le regole generiche seguono le sue, e 
 | `bin/cli.js` | Il comando `agent-harness` |
 | `lib/sync.js` | Composizione, scrittura e controllo dei file gestiti |
 | `lib/hooks.js` | Controlli degli hook git e commitlint |
-| `lib/check-flow.sh` | Controllo del flusso OpenSpec sulle PR |
+| `lib/check-flow.sh` | Controllo del flusso OpenSpec sulle PR e regola dei nomi dei branch |
 | `lib/commitlint.config.js` | Regole dei messaggi di commit |
 | `lib/deps.js` | Percorsi e versioni di OpenSpec e commitlint |
 | `assets/guidelines/` | `CORE.md` e `WORKFLOW.md`, composti con il `PATTERNS.md` del progetto in `AGENTS.md`, `CLAUDE.md` e regole Cursor |
@@ -89,10 +89,10 @@ Ogni percorso gestito appartiene al pacchetto: il `sync` lo sovrascrive. La CI d
 | Comando | Chi lo usa |
 | --- | --- |
 | `agent-harness hook pre-commit` | `.husky/pre-commit`: niente commit su `main` e `develop`, file sotto i 500KB (i lockfile sono esenti), file gestiti allineati e in staging, e sui branch `ai/` nessun file protetto |
-| `agent-harness hook pre-push` | `.husky/pre-push`: niente push su `main` e `develop`, anche con `git push origin HEAD:main` da un altro branch |
+| `agent-harness hook pre-push` | `.husky/pre-push`: niente push su `main` e `develop`, anche con `git push origin HEAD:main` da un altro branch; nome del branch con la stessa regola della CI (tag e cancellazioni esclusi) |
 | `agent-harness hook commit-msg <file>` | `.husky/commit-msg`: Conventional Commits con le regole del pacchetto |
 | `agent-harness commitlint --from <sha> --to <sha>` | CI: messaggi di tutti i commit della PR |
-| `agent-harness check-flow <branch> <base> <head>` | CI: flusso OpenSpec in base al prefisso del branch |
+| `agent-harness check-flow <branch> <base> <head>` | CI: flusso OpenSpec in base al prefisso del branch; i branch `revert-<n>-…` del bottone Revert di GitHub hanno solo il controllo dei summary |
 | `agent-harness openspec <argomenti>` | CI: la CLI OpenSpec nella versione del pacchetto |
 
 ## Cosa serve nel progetto

@@ -4,7 +4,7 @@
 // USED BY: npm test, CI of the package
 // KEY DECISIONS: hooks are called through the CLI, as Husky does, on real temp repos
 // GOTCHAS: the commit-msg cases are the rules that bit in practice: capitals and perf
-// LAST UPDATED: 2026-10-22 — lockfiles exempt from the size limit
+// LAST UPDATED: 2026-10-22 — branch names checked on pre-push
 // ============================================================
 
 import { test } from 'node:test'
@@ -98,6 +98,31 @@ test('pre-push blocks pushes to protected branches, whatever is checked out', ()
   assert.equal(status, 1)
   assert.match(out, /Push diretto su 'main'/)
   assert.equal(cli(root, ['hook', 'pre-push', 'origin', 'url'], line('develop')).status, 1)
+})
+
+test('pre-push blocks a branch name the CI would reject, before it leaves the machine', () => {
+  const root = repo()
+  const { status, out } = cli(root, ['hook', 'pre-push', 'origin', 'url'], 'refs/heads/feature/Upper abc refs/heads/feature/Upper def\n')
+  assert.equal(status, 1)
+  assert.match(out, /Nome branch non conforme: feature\/Upper/)
+  assert.match(out, /git branch -m/)
+  assert.equal(cli(root, ['hook', 'pre-push', 'origin', 'url'], 'refs/heads/x abc refs/heads/hotfix/x def\n').status, 1, 'the remote name counts')
+})
+
+test('pre-push lets tags, deletions and GitHub revert branches through', () => {
+  const root = repo()
+  const zero = '0'.repeat(40)
+  const refs = [
+    `refs/tags/v1.0.0 abc refs/tags/v1.0.0 ${zero}`,
+    `(delete) ${zero} refs/heads/Old_Name def`,
+    `refs/heads/revert-64-chore/x abc refs/heads/revert-64-chore/x ${zero}`,
+  ]
+  for (const ref of refs) assert.equal(cli(root, ['hook', 'pre-push', 'origin', 'url'], `${ref}\n`).status, 0, ref)
+})
+
+test('pre-push without refs checks the name of the current branch', () => {
+  const root = repo('chore/Bad_Name')
+  assert.match(cli(root, ['hook', 'pre-push'], '').out, /Nome branch non conforme: chore\/Bad_Name/)
 })
 
 test('pre-push without refs on stdin falls back to the current branch', () => {
