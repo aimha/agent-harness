@@ -79,26 +79,4 @@ Se un requisito è ambiguo, l'agente si ferma e formula la domanda specifica nel
 
 ## File protetti — mai toccati dagli agenti
 
-```
-.agent-guidelines/*
-.cursor/
-.env*               (eccetto .env.example)
-.github/workflows/*
-.husky/*
-.opencode/commands/
-.opencode/skills/
-.npmrc
-agent-harness.lock.json
-AGENTS.md
-CLAUDE.md
-docker-compose.yml
-Makefile
-openspec/config.yaml
-openspec/specs/
-opencode.json
-opencode.local.json
-package-lock.json
-package.json        (root e ogni sub-package)
-```
-
-I file protetti propri dello stack (per esempio `vite.config.*`) sono elencati in `PATTERNS.md`.
+<!-- agent-harness:protected-files -->

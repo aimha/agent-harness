@@ -55,7 +55,7 @@ Funziona da qualsiasi cartella del progetto: la radice è quella che contiene il
 **Cosa scrive il progetto**
 
 - `.agent-guidelines/PATTERNS.md`, obbligatorio: stack, struttura, naming, pattern, e le regole che valgono solo per il progetto, per esempio i file protetti dello stack (`vite.config.*`).
-- `opencode.local.json`, facoltativo: permessi aggiuntivi, nello stesso formato di `opencode.json`. Le regole vengono accodate a quelle del pacchetto. In OpenCode vince l'ultima regola che corrisponde, quindi una regola locale con lo stesso pattern di una del pacchetto la sostituisce e passa in fondo. Le altre chiavi (per esempio `model`) sostituiscono quelle del pacchetto.
+- `opencode.local.json`, facoltativo: permessi aggiuntivi, nello stesso formato di `opencode.json`. I suoi `deny` di modifica sono anche i file protetti del progetto: il pre-commit li blocca sui branch `ai/`, e il `sync` li elenca nella sezione "File protetti" di `AGENTS.md`. Una sola lista, letta con le regole di OpenCode: i pattern partono dalla radice, quindi un file in una sottocartella si scrive con `*/` davanti (`*/vite.config.*`). Le regole vengono accodate a quelle del pacchetto. In OpenCode vince l'ultima regola che corrisponde, quindi una regola locale con lo stesso pattern di una del pacchetto la sostituisce e passa in fondo. Le altre chiavi (per esempio `model`) sostituiscono quelle del pacchetto.
 
 **Il lock** serve a due cose. Mostra quale versione ha generato i file, e `sync --check` segnala quando il pacchetto è stato aggiornato senza rilanciare il `sync`. Elenca anche i file gestiti, così quando una versione nuova smette di fornirne uno il `sync` lo rimuove dal progetto. I file che non sono mai stati nel lock non vengono mai toccati.
 
@@ -69,7 +69,7 @@ Ogni percorso gestito appartiene al pacchetto: il `sync` lo sovrascrive. La CI d
 
 | Comando | Chi lo usa |
 | --- | --- |
-| `agent-harness hook pre-commit` | `.husky/pre-commit`: niente commit su `main` e `develop`, file sotto i 500KB, file gestiti allineati e in staging |
+| `agent-harness hook pre-commit` | `.husky/pre-commit`: niente commit su `main` e `develop`, file sotto i 500KB, file gestiti allineati e in staging, e sui branch `ai/` nessun file protetto |
 | `agent-harness hook pre-push` | `.husky/pre-push`: niente push su `main` e `develop`, anche con `git push origin HEAD:main` da un altro branch |
 | `agent-harness hook commit-msg <file>` | `.husky/commit-msg`: Conventional Commits con le regole del pacchetto |
 | `agent-harness commitlint --from <sha> --to <sha>` | CI: messaggi di tutti i commit della PR |
