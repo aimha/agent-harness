@@ -16,16 +16,21 @@ npx agent-harness help
 | Percorso | Contenuto |
 | --- | --- |
 | `bin/cli.js` | Il comando `agent-harness` |
-| `assets/guidelines/` | `CORE.md` e `WORKFLOW.md`, composti con il `PATTERNS.md` del progetto in `AGENTS.md`, `CLAUDE.md` e regole Cursor |
 | `lib/sync.js` | Composizione, scrittura e controllo dei file gestiti |
-| `assets/files/` | File copiati nel progetto allo stesso percorso: comandi e skill OpenCode, configurazione OpenSpec, CI |
+| `lib/hooks.js` | Controlli degli hook git e commitlint |
+| `lib/check-flow.sh` | Controllo del flusso OpenSpec sulle PR |
+| `lib/commitlint.config.js` | Regole dei messaggi di commit |
+| `lib/deps.js` | Percorsi e versioni di OpenSpec e commitlint |
+| `assets/guidelines/` | `CORE.md` e `WORKFLOW.md`, composti con il `PATTERNS.md` del progetto in `AGENTS.md`, `CLAUDE.md` e regole Cursor |
+| `assets/files/` | File copiati nel progetto allo stesso percorso: comandi e skill OpenCode (compresi quelli di OpenSpec), configurazione OpenSpec, hook di Husky, CI |
 | `assets/opencode/permissions.json` | Permessi di base di OpenCode, composti con quelli del progetto |
-| `assets/openspec/profile.json` | Workflow OpenSpec attivi |
+| `assets/openspec/profile.json` | Workflow OpenSpec attivi, usati per generare i comandi `/opsx-*` |
+| `scripts/openspec-assets.js` | Rigenera i comandi e le skill di OpenSpec negli asset (solo per chi sviluppa il pacchetto) |
 
 ## Due modi di arrivare nei progetti
 
 - **Copiati** da `agent-harness sync`: i file che gli strumenti cercano in un percorso fisso (`AGENTS.md`, `.opencode/`, `opencode.json`, la CI). Ogni copia porta la versione del pacchetto, e `sync --check` in CI fallisce se qualcuno la modifica a mano.
-- **Eseguiti dal pacchetto**: hook, controllo del flusso, configurazione di commitlint. Nel progetto resta solo una riga che li richiama, e si aggiornano con la versione.
+- **Eseguiti dal pacchetto**: controlli degli hook, controllo del flusso, commitlint, OpenSpec. Nel progetto resta solo la riga che li chiama (gli hook in `.husky/`, i passi di `ci.yml`), e cambiano con la versione.
 
 Il progetto tiene i file suoi, che il `sync` non tocca: `PATTERNS.md`, le aggiunte locali alle regole e ai permessi, glossario, ADR e spec.
 
@@ -56,10 +61,35 @@ Funziona da qualsiasi cartella del progetto: la radice è quella che contiene il
 
 Ogni percorso gestito appartiene al pacchetto: il `sync` lo sovrascrive. Se un progetto ha bisogno di un workflow CI in più, lo mette in un file suo accanto a `ci.yml` (per esempio `.github/workflows/e2e.yml`), non dentro `ci.yml`.
 
+`sync --check` controlla anche che `npx openspec` nel progetto trovi la stessa versione di OpenSpec del pacchetto: è quella che usano gli agenti e i comandi del WORKFLOW.
+
+## Gli altri comandi
+
+| Comando | Chi lo usa |
+| --- | --- |
+| `agent-harness hook pre-commit` | `.husky/pre-commit`: niente commit su `main` e `develop`, file sotto i 500KB, file gestiti allineati e in staging |
+| `agent-harness hook pre-push` | `.husky/pre-push`: niente push su `main` e `develop`, anche con `git push origin HEAD:main` da un altro branch |
+| `agent-harness hook commit-msg <file>` | `.husky/commit-msg`: Conventional Commits con le regole del pacchetto |
+| `agent-harness commitlint --from <sha> --to <sha>` | CI: messaggi di tutti i commit della PR |
+| `agent-harness check-flow <branch> <base> <head>` | CI: flusso OpenSpec in base al prefisso del branch |
+| `agent-harness openspec <argomenti>` | CI: la CLI OpenSpec nella versione del pacchetto |
+
+## Cosa serve nel progetto
+
+- `@aimha/agent-harness` come devDependency, con versione esatta.
+- `husky` come devDependency e `"prepare": "husky"` negli script: è Husky che attiva gli hook a ogni `npm ci` o `npm install`. Gli hook in `.husky/` li scrive il `sync`.
+- Niente OpenSpec né commitlint tra le dipendenze del progetto: arrivano con il pacchetto, e una versione diversa nel progetto prenderebbe il posto di quella pinnata. `sync --check` lo segnala.
+
+## Aggiornare OpenSpec o il profilo
+
+1. Cambiare la versione esatta di `@fission-ai/openspec` in `package.json` (release di almeno 5 giorni), oppure i workflow in `assets/openspec/profile.json`.
+2. `npm install`, poi `npm run openspec-assets`: rigenera `/opsx-*` e le skill `openspec-*` in `assets/files/.opencode/`, con una configurazione OpenSpec temporanea, senza toccare quella globale.
+3. `npm test`: un test fallisce se gli asset non corrispondono alla CLI pinnata.
+
 ## Passi di costruzione
 
 1. Struttura del repo e contenuti copiati dal template
-2. `sync` e `sync --check` ← questo stato
-3. Comandi eseguiti dal pacchetto: hook, controllo del flusso, aggiornamento OpenSpec, preset commitlint
+2. `sync` e `sync --check`
+3. Comandi eseguiti dal pacchetto: hook, controllo del flusso, commitlint, OpenSpec ← questo stato
 4. Test e CI del pacchetto, poi tag `v0.1.0`
 5. Il template passa a usare il pacchetto

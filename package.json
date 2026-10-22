@@ -24,7 +24,13 @@
   },
   "homepage": "https://github.com/aimha/agent-harness#readme",
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "openspec-assets": "node scripts/openspec-assets.js"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "@commitlint/cli": "21.2.3",
+    "@commitlint/config-conventional": "21.2.3",
+    "@fission-ai/openspec": "1.14.1"
+  }
 }
