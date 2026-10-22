@@ -2,6 +2,16 @@
 
 Le versioni seguono [semver](https://semver.org/lang/it/). Nelle `0.x` una versione minore può richiedere interventi nel progetto: sono elencati sotto "Aggiornare".
 
+## 0.2.1 — 2026-10-22
+
+### Correzioni
+
+- **Il commit di archiviazione sul branch `ai/` veniva bloccato dal pre-commit**: `npx openspec archive` scrive in `openspec/specs/`, che è tra i file protetti, e lo stesso valeva per il commit del `Purpose` di una capability nuova. Il controllo dei file protetti sui branch `ai/` ora esclude `openspec/specs/`. Le modifiche a mano degli agenti lì restano negate da OpenCode, e la struttura la controlla `openspec validate` in CI.
+
+### Aggiornare da 0.2.0
+
+`npm i -D -E github:aimha/agent-harness#v0.2.1`, poi `npx agent-harness sync`: cambia solo una frase nella sezione "File protetti" di `AGENTS.md`.
+
 ## 0.2.0 — 2026-10-22
 
 Il pacchetto segue il modello di Foundation, che è il progetto di riferimento.
