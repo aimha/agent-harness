@@ -102,6 +102,8 @@ test('commit-msg applies the package rules', () => {
   assert.equal(check('Feat: Add endpoint'), 1)
   assert.equal(check('feat: Add endpoint with NestJS'), 1)
   assert.equal(check('perf: faster'), 1)
+  assert.equal(check('build(docker): pin the base image'), 0)
+  assert.equal(check('revert: undo'), 1)
   assert.equal(check('feat: add endpoint.'), 1)
 })
 

@@ -1,3 +1,7 @@
+# CORE — Naming, convenzioni, restrizioni assolute
+
+Stack, struttura del progetto, naming dei file e pattern stanno in `PATTERNS.md`, più sotto. Dove `PATTERNS.md` è più preciso di questa sezione, vale `PATTERNS.md`.
+
 ## Naming conventions
 
 ### Branch
@@ -5,19 +9,18 @@
 - `ai/<descrizione-breve-kebab-case>` — branch agenti AI
 - `feature/<descrizione>` — feature developer
 - `fix/<descrizione>` — bugfix developer
-- `spec/<nome-change>`
-- `chore/<descrizione>`
+- `spec/<nome-change>` — spec OpenSpec di un change (vedi WORKFLOW)
+- `chore/<descrizione>` — manutenzione: tooling, dipendenze, documentazione
+- `main` e `develop` — branch principali, mai lavorati direttamente
 
 ## Lingua
 
 - **Commenti nel codice:** inglese
 - **Documentazione** (README, docs/): italiano
 
-## Header e commenti
+## File header obbligatorio
 
-### Header obbligatorio
-
-Ogni file di codice inizia con questo blocco, seguito da una riga vuota. Si usa la sintassi di commento del linguaggio: `//` per TS/JS, `#` per shell e YAML.
+Ogni file di codice inizia con questo blocco. Quali file e quali cartelle lo richiedono, e quali sono esenti, lo dice `PATTERNS.md`; se non lo dice, vale per ogni file di codice. Si usa la sintassi di commento del linguaggio: `//` per TS/JS, `#` per shell e YAML.
 
 ```
 // ============================================================
@@ -26,14 +29,17 @@ Ogni file di codice inizia con questo blocco, seguito da una riga vuota. Si usa 
 // USED BY: [chi usa questo modulo]
 // KEY DECISIONS: [perché alcune scelte non ovvie]
 // GOTCHAS: [trappole, edge case, comportamenti inattesi]
-// LAST UPDATED: [data ISO + breve descrizione]
+// LAST UPDATED: YYYY-MM-DD — [breve descrizione]
 // ============================================================
 ```
 
-- ROLE è una sola riga
-- GOTCHAS è la sezione più importante: solo ciò che morde
-- LAST UPDATED si aggiorna solo per modifiche semanticamente rilevanti
-- Al termine di ogni sessione, `/update-context` aggiorna gli header dei file modificati
+- Delimitatori: `// ` seguito da esattamente 60 `=`, in apertura e in chiusura. Prima dell'header non c'è niente, né commenti né import; l'unica eccezione è lo shebang (`#!/usr/bin/env ...`) di un file eseguibile, che resta sulla prima riga.
+- Tutti e sei i campi, in quest'ordine. Un campo senza contenuto vale `none`.
+- Un campo che continua va a capo con `//` e almeno due spazi di rientro (`//   ...`).
+- `ROLE` è una sola riga. `GOTCHAS` è la sezione più importante: solo ciò che morde.
+- `LAST UPDATED`: data ISO, trattino lungo `—`, descrizione. Si aggiorna quando cambiano il comportamento o l'API del file, e quando il file viene rinominato (`renamed from <nome precedente>`). Non si aggiorna per modifiche al solo header, per la formattazione o per i percorsi degli import.
+- Esenti di norma: le migration e i file di configurazione dei tool (`eslint.config.*`, `prettier.config.js`, `vite.config.js` e simili). L'elenco esatto sta in `PATTERNS.md`.
+- Al termine di ogni sessione, `/update-context` aggiorna gli header dei file modificati.
 
 ### Commenti inline
 
@@ -51,8 +57,10 @@ Ogni file di codice inizia con questo blocco, seguito da una riga vuota. Si usa 
 
 ## Commit
 
-- Conventional Commits con commitlint
+- Conventional Commits con commitlint: `<type>(<scope>): <descrizione>`
+- Tipi ammessi: `feat`, `fix`, `refactor`, `style`, `test`, `docs`, `chore`, `ci`, `build`. `style` è solo formattazione, zero logica
 - `subject-case: lower-case` — nomi di librerie vanno lowercased nel subject
+- Validati dall'hook `commit-msg` e, sull'intera PR, dalla CI
 
 ## Regole generali
 
