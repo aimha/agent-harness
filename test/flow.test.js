@@ -6,7 +6,7 @@
 //   archive, Purpose), as a person would; each gate is checked at the step it guards
 // GOTCHAS: OpenSpec rejects a Purpose shorter than 50 characters after archive, so the
 //   fixture writes a real one
-// LAST UPDATED: 2026-10-22 - summaries per branch path, chains, develop integration PRs
+// LAST UPDATED: 2026-10-22 — GitHub revert branches
 // ============================================================
 
 import { test } from 'node:test'
@@ -177,6 +177,16 @@ test('a summary deleted in the PR is not checked', () => {
   git(root, 'rm', '-q', 'docs/summaries/ai/old-task.md')
   commit(root, 'chore: drop old summary')
   assert.equal(flow(root, 'chore/cleanup').status, 0)
+})
+
+test('GitHub revert branches pass the name check, still checking the summaries they carry', () => {
+  const root = flowRepo()
+  assert.equal(flow(root, 'revert-64-chore/agent-harness-0-2-2').status, 0)
+  assert.equal(flow(root, 'revert-x-chore/y').status, 1, 'the PR number is required')
+  git(root, 'checkout', '-qb', 'revert-7-ai/x')
+  summary(root, 'unarchived')
+  commit(root, 'docs: summary without archive')
+  assert.match(flow(root, 'revert-7-ai/x').out, /Change unarchived non archiviato|Nessun change archiviato con nome unarchived/)
 })
 
 test('develop and main merge only into each other, with the summary check applied', () => {
