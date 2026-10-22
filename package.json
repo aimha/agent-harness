@@ -26,4 +26,5 @@
   "scripts": {
     "test": "node --test"
   }
+  "license": "MIT"
 }
